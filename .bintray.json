@@ -1,0 +1,24 @@
+{
+  "package": {
+    "name": "jinsight",
+    "repo": "maven",
+    "subject": "apptuitai"
+  },
+  "version": {
+    "name": "@PACKAGE_VERSION@",
+    "desc": "Version @PACKAGE_VERSION@",
+    "released": "@PACKAGE_DATE@",
+    "vcs_tag": "v@PACKAGE_VERSION@"
+  },
+  "files": [
+    {
+      "includePattern": "target/(jinsight-@PACKAGE_VERSION@.*\\.jar)",
+      "uploadPattern": "/ai/apptuit/jinsight/@PACKAGE_VERSION@/$1"
+    },
+    {
+      "includePattern": "pom.xml",
+      "uploadPattern": "/ai/apptuit/jinsight/@PACKAGE_VERSION@/jinsight-@PACKAGE_VERSION@.pom"
+    }
+  ],
+  "publish": true
+}

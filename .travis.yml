@@ -22,7 +22,9 @@ env:
     - METRICS_VERSION=3.2.6
     - METRICS_VERSION=4.0.2
 
-install: true
+install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y xmlstarlet
 
 addons:
   sonarcloud:
@@ -36,6 +38,17 @@ jdk:
 services:
   - memcached
   - redis-server
+
+before_script:
+  - xmlstarlet ed --inplace -u "/_:project/_:properties/_:metrics.version" -v "$METRICS_VERSION" pom.xml;
+  - SEMVER_REGEX="^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(\-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$"
+  - |
+    if [[ "$TRAVIS_TAG" =~ $SEMVER_REGEX ]]; then
+      export PACKAGE_VERSION=${TRAVIS_TAG#v};
+      xmlstarlet ed --inplace -u "/_:project/_:version" -v "$PACKAGE_VERSION" pom.xml;
+    fi
+  - echo $TRAVIS_TAG
+  - echo $PACKAGE_VERSION
 
 script:
   - |
@@ -52,6 +65,22 @@ before_install:
 after_success:
   - bash <(curl -s https://codecov.io/bash)
   - java -cp ~/.codacy/reporter/codacy-reporter-latest.jar com.codacy.CodacyCoverageReporter -l Java -r target/site/jacoco/jacoco.xml
+
+
+before_deploy:
+  - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
+  - echo $PACKAGE_DATE;
+  - sed -e "s/@PACKAGE_DATE@/$PACKAGE_DATE/" -e "s/@PACKAGE_VERSION@/$PACKAGE_VERSION/" -i .bintray.json;
+  - cat .bintray.json;
+
+deploy:
+  - provider: bintray
+    file: ".bintray.json"
+    user: "$BINTRAY_USER"
+    key: "$BINTRAY_API_KEY"
+    on:
+      tags: true
+      condition: $PACKAGE_VERSION != "" && METRICS_VERSION == "3.2.6" && $BINTRAY_API_KEY != ""
 
 cache:
   directories:
