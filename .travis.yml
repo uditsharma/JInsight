@@ -74,10 +74,9 @@ before_deploy:
   - cat .bintray.json;
 
 deploy:
-  - provider: bintray
-    file: ".bintray.json"
-    user: "$BINTRAY_USER"
-    key: "$BINTRAY_API_KEY"
+  - provider: script
+    script: "mvn -s .maven.settings.xml deploy"
+    skip_cleanup: true
     on:
       tags: true
       condition: $PACKAGE_VERSION != "" && $METRICS_VERSION == "3.2.6" && $BINTRAY_API_KEY != ""
