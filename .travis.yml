@@ -80,7 +80,7 @@ deploy:
     key: "$BINTRAY_API_KEY"
     on:
       tags: true
-      condition: $PACKAGE_VERSION != "" && METRICS_VERSION == "3.2.6" && $BINTRAY_API_KEY != ""
+      condition: $PACKAGE_VERSION != "" && $METRICS_VERSION == "3.2.6" && $BINTRAY_API_KEY != ""
 
 cache:
   directories:
