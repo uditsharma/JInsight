@@ -66,16 +66,9 @@ after_success:
   - bash <(curl -s https://codecov.io/bash)
   - java -cp ~/.codacy/reporter/codacy-reporter-latest.jar com.codacy.CodacyCoverageReporter -l Java -r target/site/jacoco/jacoco.xml
 
-
-before_deploy:
-  - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
-  - echo $PACKAGE_DATE;
-  - sed -e "s/@PACKAGE_DATE@/$PACKAGE_DATE/g" -e "s/@PACKAGE_VERSION@/$PACKAGE_VERSION/g" -i .bintray.json;
-  - cat .bintray.json;
-
 deploy:
   - provider: script
-    script: "mvn -s .maven.settings.xml deploy"
+    script: "mvn -s .maven.settings.xml deploy -DskipTests"
     skip_cleanup: true
     on:
       tags: true
