@@ -70,7 +70,7 @@ after_success:
 before_deploy:
   - PACKAGE_DATE=$(git log -1 --pretty="format:%ad" $TRAVIS_TAG --date=short);
   - echo $PACKAGE_DATE;
-  - sed -e "s/@PACKAGE_DATE@/$PACKAGE_DATE/" -e "s/@PACKAGE_VERSION@/$PACKAGE_VERSION/" -i .bintray.json;
+  - sed -e "s/@PACKAGE_DATE@/$PACKAGE_DATE/g" -e "s/@PACKAGE_VERSION@/$PACKAGE_VERSION/g" -i .bintray.json;
   - cat .bintray.json;
 
 deploy:
