@@ -16,10 +16,12 @@
 
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
+import ai.apptuit.metrics.jinsight.WebRequestContext;
 import java.io.IOException;
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -41,8 +43,13 @@ public class AsyncServlet extends BaseTestServlet {
       HttpServletResponse httpServletResponse = (HttpServletResponse) acontext.getResponse();
       try {
         System.out.println("Sleeping");
-        Thread.sleep(5000);
+        Thread.sleep(2000);
         System.out.println("DONE Sleeping");
+        WebRequestContext currentRequest = WebRequestContext.getCurrentRequest();
+        if (currentRequest != null) {
+          Cookie cookie = new Cookie(RUNTIME_REQUEST_ID_COOKIENAME, currentRequest.getRequestID());
+          response.addCookie(cookie);
+        }
         httpServletResponse.getOutputStream().write(uuid.getBytes());
       } catch (InterruptedException | IOException | RuntimeException e) {
         try {

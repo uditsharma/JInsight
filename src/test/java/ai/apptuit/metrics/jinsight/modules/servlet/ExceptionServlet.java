@@ -16,8 +16,10 @@
 
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
+import ai.apptuit.metrics.jinsight.WebRequestContext;
 import java.io.IOException;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -31,6 +33,8 @@ public class ExceptionServlet extends BaseTestServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
+    String requestId = WebRequestContext.getCurrentRequest().getRequestID();
+    response.addCookie(new Cookie(RUNTIME_REQUEST_ID_COOKIENAME, requestId));
     RuntimeException exception = new RuntimeException("Always fail");
     exception.setStackTrace(new StackTraceElement[0]);
     throw exception;

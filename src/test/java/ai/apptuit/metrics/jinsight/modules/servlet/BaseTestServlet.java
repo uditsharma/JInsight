@@ -16,12 +16,16 @@
 
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
+import static ai.apptuit.metrics.jinsight.WebRequestContext.X_REQUEST_ID_HEADERNAME;
+
 import javax.servlet.http.HttpServlet;
 
 /**
  * @author Rajiv Shivane
  */
 abstract class BaseTestServlet extends HttpServlet {
+
+  public static final String RUNTIME_REQUEST_ID_COOKIENAME = X_REQUEST_ID_HEADERNAME + "-Runtime";
 
   public abstract String getPath();
 

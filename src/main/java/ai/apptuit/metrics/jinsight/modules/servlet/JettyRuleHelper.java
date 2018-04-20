@@ -17,7 +17,6 @@
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
 import ai.apptuit.metrics.dropwizard.TagEncodedMetricName;
-import ai.apptuit.metrics.jinsight.modules.common.RuleHelper;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,7 +35,7 @@ import org.jboss.byteman.rule.Rule;
 /**
  * @author Rajiv Shivane
  */
-public class JettyRuleHelper extends RuleHelper {
+public class JettyRuleHelper extends WebServerRuleHelper {
 
   public static final TagEncodedMetricName JETTY_METRIC_PREFIX = TagEncodedMetricName
       .decode("jetty");

@@ -18,6 +18,7 @@ package ai.apptuit.metrics.jinsight.modules.servlet;
 
 import ai.apptuit.metrics.dropwizard.TagEncodedMetricName;
 import ai.apptuit.metrics.jinsight.RegistryService;
+import ai.apptuit.metrics.jinsight.WebRequestContext;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -63,7 +64,12 @@ public class ContextMetricsHelper {
     activeRequestsCounter.inc();
 
     long startTime = System.nanoTime();
-    runnable.run();
+    try {
+      WebRequestContext.beginRequest(request, response);
+      runnable.run();
+    } finally {
+      WebRequestContext.endRequest();
+    }
     if (request.isAsyncStarted()) {
       request.getAsyncContext()
           .addListener(new AsyncCompletionListener(startTime, request, response));

@@ -17,7 +17,6 @@
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
 import ai.apptuit.metrics.dropwizard.TagEncodedMetricName;
-import ai.apptuit.metrics.jinsight.modules.common.RuleHelper;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import org.apache.catalina.Lifecycle;
@@ -30,7 +29,7 @@ import org.jboss.byteman.rule.Rule;
 /**
  * @author Rajiv Shivane
  */
-public class TomcatRuleHelper extends RuleHelper {
+public class TomcatRuleHelper extends WebServerRuleHelper {
 
   public static final TagEncodedMetricName TOMCAT_METRIC_PREFIX = TagEncodedMetricName
       .decode("tomcat");
