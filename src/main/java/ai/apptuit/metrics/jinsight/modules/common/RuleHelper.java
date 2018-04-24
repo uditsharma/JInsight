@@ -155,7 +155,7 @@ public class RuleHelper extends Helper {
       Deque<OperationContext> contexts = CONTEXT_STACK.get();
       OperationContext prevContext = null;
       Iterator<OperationContext> iterator = contexts.descendingIterator();
-      while (iterator.hasNext()){
+      while (iterator.hasNext()) {
         prevContext = iterator.next();
         if (prevContext != RENTRANT) {
           break;

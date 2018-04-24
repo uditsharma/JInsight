@@ -29,7 +29,8 @@ public class TomcatRuleSet extends AbstractRuleSet {
 
   private static final String HELPER_NAME =
       "ai.apptuit.metrics.jinsight.modules.servlet.TomcatRuleHelper";
-  private static final String ASYNC_CONTEXT_IMPL = "org.apache.catalina.core.AsyncContextImpl$RunnableWrapper";
+  private static final String ASYNC_CONTEXT_IMPL =
+      "org.apache.catalina.core.AsyncContextImpl$RunnableWrapper";
 
   private final List<RuleInfo> rules = new ArrayList<>();
 

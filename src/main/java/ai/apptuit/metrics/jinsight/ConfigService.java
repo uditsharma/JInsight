@@ -40,7 +40,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Provides access to Configuration options
+ * Provides access to Configuration options.
  *
  * @author Rajiv Shivane
  */
@@ -279,8 +279,8 @@ public class ConfigService {
     }
 
     while (resources != null && resources.hasMoreElements()) {
-      URL manifestURL = resources.nextElement();
-      try (InputStream resource = manifestURL.openStream()) {
+      URL manifestUrl = resources.nextElement();
+      try (InputStream resource = manifestUrl.openStream()) {
         Manifest manifest = new Manifest(resource);
         Attributes mainAttributes = manifest.getMainAttributes();
         if (mainAttributes != null) {
@@ -294,7 +294,7 @@ public class ConfigService {
           }
         }
       } catch (IOException e) {
-        LOGGER.log(Level.SEVERE, "Error loading manifest from [" + manifestURL + "]", e);
+        LOGGER.log(Level.SEVERE, "Error loading manifest from [" + manifestUrl + "]", e);
       }
 
     }

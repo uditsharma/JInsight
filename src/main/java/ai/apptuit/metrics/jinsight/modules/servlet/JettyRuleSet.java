@@ -42,9 +42,12 @@ public class JettyRuleSet extends AbstractRuleSet {
     addRule(AsyncContextState.class, "start(Runnable)",
         RuleInfo.AT_EXCEPTION_EXIT, "unregisterAsync($1)");
 
-    addRule(ContextHandler.class, "handle(org.eclipse.jetty.server.Request, Runnable)", RuleInfo.AT_ENTRY, "asyncBegin($2)");
-    addRule(ContextHandler.class, "handle(org.eclipse.jetty.server.Request, Runnable)", RuleInfo.AT_EXIT, "asyncEnd($2)");
-    addRule(ContextHandler.class, "handle(org.eclipse.jetty.server.Request, Runnable)", RuleInfo.AT_EXCEPTION_EXIT, "asyncErr($2)");
+    addRule(ContextHandler.class, "handle(org.eclipse.jetty.server.Request, Runnable)",
+        RuleInfo.AT_ENTRY, "asyncBegin($2)");
+    addRule(ContextHandler.class, "handle(org.eclipse.jetty.server.Request, Runnable)",
+        RuleInfo.AT_EXIT, "asyncEnd($2)");
+    addRule(ContextHandler.class, "handle(org.eclipse.jetty.server.Request, Runnable)",
+        RuleInfo.AT_EXCEPTION_EXIT, "asyncErr($2)");
   }
 
   private void addRule(Class clazz, String methodName, String whereClause, String action) {
