@@ -36,7 +36,7 @@ public class WebServerRuleHelper extends RuleHelper {
   }
 
   public void registerAsync(Runnable async) {
-    WebRequestContext currentRequest = WebRequestContext.getCurrentRequest();
+    WebRequestContext currentRequest = WebRequestContext.getCurrentContext();
     setObjectProperty(async, REQUEST_ID_PROPERTYNAME, currentRequest.getRequestID());
     setObjectProperty(async, CONTEXT_ROOT_PROPERTYNAME, currentRequest.getContextPath());
     logdebug("WebServerRuleHelper.registerAsync", currentRequest);

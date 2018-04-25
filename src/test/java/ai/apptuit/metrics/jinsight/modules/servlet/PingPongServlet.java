@@ -51,7 +51,7 @@ public class PingPongServlet extends BaseTestServlet {
   }
 
   private String getRequestID() {
-    return WebRequestContext.getCurrentRequest().getRequestID();
+    return WebRequestContext.getCurrentContext().getRequestID();
   }
 
   @Override

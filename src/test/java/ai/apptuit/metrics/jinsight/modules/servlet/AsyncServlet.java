@@ -45,7 +45,7 @@ public class AsyncServlet extends BaseTestServlet {
         System.out.println("Sleeping");
         Thread.sleep(2000);
         System.out.println("DONE Sleeping");
-        WebRequestContext currentRequest = WebRequestContext.getCurrentRequest();
+        WebRequestContext currentRequest = WebRequestContext.getCurrentContext();
         if (currentRequest != null) {
           Cookie cookie = new Cookie(RUNTIME_REQUEST_ID_COOKIENAME, currentRequest.getRequestID());
           response.addCookie(cookie);

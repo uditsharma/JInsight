@@ -16,7 +16,7 @@
 
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
-import static ai.apptuit.metrics.jinsight.WebRequestContext.X_REQUEST_ID_HEADERNAME;
+import static ai.apptuit.metrics.jinsight.modules.servlet.ContextMetricsHelper.X_REQUEST_ID_HEADERNAME;
 
 import javax.servlet.http.HttpServlet;
 

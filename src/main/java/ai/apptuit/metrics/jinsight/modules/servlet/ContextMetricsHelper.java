@@ -24,6 +24,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import javax.servlet.AsyncEvent;
@@ -38,6 +39,8 @@ import javax.servlet.http.HttpServletResponse;
 public class ContextMetricsHelper {
 
   public static final String ROOT_CONTEXT_PATH = "ROOT";
+  public static final String X_REQUEST_ID_HEADERNAME = "X-Request-ID";
+  private static final String REQUEST_CONTEXT_ATTRIBUTENAME = "X-Request-Context";
 
   private MetricRegistry registry;
   private TagEncodedMetricName requestCountRootMetric;
@@ -56,6 +59,37 @@ public class ContextMetricsHelper {
         .counter(serverRootMetric.submetric("requests.active").toString());
   }
 
+  private static void beginRequest(HttpServletRequest request, HttpServletResponse response) {
+
+    String contextPath = request.getContextPath();
+    if (contextPath == null || contextPath.length() == 1) {
+      contextPath = "";
+    }
+    if (contextPath.trim().equals("")) {
+      contextPath = ROOT_CONTEXT_PATH;
+    }
+
+    //Pick up requestID from the attribute if we are re-entering for exception handling in Jetty
+    WebRequestContext context = (WebRequestContext) request
+        .getAttribute(REQUEST_CONTEXT_ATTRIBUTENAME);
+    if (context == null) {
+      String requestID = getRequestID(request);
+      context = WebRequestContext.pushContext(contextPath, requestID);
+      request.setAttribute(REQUEST_CONTEXT_ATTRIBUTENAME, context);
+    } else {
+      WebRequestContext.setContext(context);
+    }
+    response.setHeader(X_REQUEST_ID_HEADERNAME, context.getRequestID());
+  }
+
+  private static String getRequestID(HttpServletRequest request) {
+    String requestID = request.getHeader(X_REQUEST_ID_HEADERNAME);
+    if (requestID == null) {
+      requestID = UUID.randomUUID().toString();
+    }
+    return requestID;
+  }
+
 
   public void measure(HttpServletRequest request, HttpServletResponse response,
       MeasurableJob runnable)
@@ -64,8 +98,8 @@ public class ContextMetricsHelper {
     activeRequestsCounter.inc();
 
     long startTime = System.nanoTime();
+    beginRequest(request, response);
     try {
-      WebRequestContext.beginRequest(request, response);
       runnable.run();
     } finally {
       WebRequestContext.endRequest();

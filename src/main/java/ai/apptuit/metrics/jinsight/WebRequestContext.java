@@ -16,29 +16,25 @@
 
 package ai.apptuit.metrics.jinsight;
 
-import static ai.apptuit.metrics.jinsight.modules.servlet.ContextMetricsHelper.ROOT_CONTEXT_PATH;
-
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Deque;
 import java.util.Objects;
-import java.util.UUID;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author Rajiv Shivane
  */
 public class WebRequestContext {
 
-  public static final String X_REQUEST_ID_HEADERNAME = "X-Request-ID";
-
-  private static final String REQUEST_CONTEXT_ATTRIBUTENAME = "X-Request-Context";
   private static final ThreadLocal<Deque<WebRequestContext>> contexts =
       ThreadLocal.withInitial(ArrayDeque::new);
+  private static volatile RequestContextChangeListener[] listeners =
+      new RequestContextChangeListener[0];
 
   private String contextPath;
   private String requestID;
-
 
   private WebRequestContext(String contextPath, String requestID) {
     if (contextPath == null) {
@@ -51,41 +47,11 @@ public class WebRequestContext {
     this.requestID = requestID;
   }
 
-  public static void beginRequest(HttpServletRequest request, HttpServletResponse response) {
-
-    String contextPath = request.getContextPath();
-    if (contextPath == null || contextPath.length() == 1) {
-      contextPath = "";
-    }
-    if (contextPath.trim().equals("")) {
-      contextPath = ROOT_CONTEXT_PATH;
-    }
-
-    //Pick up requestID from the attribute if we are re-entering for exception handling in Jetty
-    WebRequestContext context = (WebRequestContext) request
-        .getAttribute(REQUEST_CONTEXT_ATTRIBUTENAME);
-    if (context == null) {
-      String requestID = getRequestID(request);
-      context = new WebRequestContext(contextPath, requestID);
-      request.setAttribute(REQUEST_CONTEXT_ATTRIBUTENAME, context);
-    }
-    setContext(context);
-    response.setHeader(X_REQUEST_ID_HEADERNAME, context.getRequestID());
-  }
-
-  private static String getRequestID(HttpServletRequest request) {
-    String requestID = request.getHeader(X_REQUEST_ID_HEADERNAME);
-    if (requestID == null) {
-      requestID = UUID.randomUUID().toString();
-    }
-    return requestID;
-  }
-
   public static WebRequestContext endRequest() {
     return unsetContext();
   }
 
-  public static WebRequestContext getCurrentRequest() {
+  public static WebRequestContext getCurrentContext() {
     return contexts.get().peek();
   }
 
@@ -95,12 +61,38 @@ public class WebRequestContext {
     return context;
   }
 
-  private static void setContext(WebRequestContext context) {
+  public static void setContext(WebRequestContext context) {
     contexts.get().push(context);
+    for (RequestContextChangeListener listener : listeners) {
+      listener.beginContext(context);
+    }
   }
 
   private static WebRequestContext unsetContext() {
-    return contexts.get().pop();
+    WebRequestContext context = contexts.get().pop();
+    for (RequestContextChangeListener listener : listeners) {
+      listener.endContext(context);
+    }
+    return context;
+  }
+
+  public static synchronized void addRequestContextChangeListener(
+      RequestContextChangeListener listener) {
+    Collection<RequestContextChangeListener> list = toCollection(listeners);
+    list.add(listener);
+    listeners = list.toArray(new RequestContextChangeListener[0]);
+  }
+
+  public static synchronized boolean removeRequestContextChangeListener(
+      RequestContextChangeListener listener) {
+    Collection<RequestContextChangeListener> list = toCollection(listeners);
+    boolean removed = list.remove(listener);
+    listeners = list.toArray(new RequestContextChangeListener[0]);
+    return removed;
+  }
+
+  private static <T> Collection<T> toCollection(T[] array) {
+    return new ArrayList<T>(Arrays.asList(array));
   }
 
   public String getContextPath() {
@@ -120,8 +112,8 @@ public class WebRequestContext {
       return false;
     }
     WebRequestContext that = (WebRequestContext) o;
-    return Objects.equals(contextPath, that.contextPath) &&
-        Objects.equals(requestID, that.requestID);
+    return Objects.equals(contextPath, that.contextPath)
+        && Objects.equals(requestID, that.requestID);
   }
 
   @Override
@@ -131,9 +123,17 @@ public class WebRequestContext {
 
   @Override
   public String toString() {
-    return "WebRequestContext{" +
-        "contextPath='" + contextPath + '\'' +
-        ", requestID='" + requestID + '\'' +
-        '}';
+    return "WebRequestContext{"
+        + "contextPath='" + contextPath + '\''
+        + ", requestID='" + requestID + '\''
+        + '}';
+  }
+
+
+  public interface RequestContextChangeListener {
+
+    void beginContext(WebRequestContext context);
+
+    void endContext(WebRequestContext context);
   }
 }

@@ -33,7 +33,7 @@ public class ExceptionServlet extends BaseTestServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-    String requestId = WebRequestContext.getCurrentRequest().getRequestID();
+    String requestId = WebRequestContext.getCurrentContext().getRequestID();
     response.addCookie(new Cookie(RUNTIME_REQUEST_ID_COOKIENAME, requestId));
     RuntimeException exception = new RuntimeException("Always fail");
     exception.setStackTrace(new StackTraceElement[0]);

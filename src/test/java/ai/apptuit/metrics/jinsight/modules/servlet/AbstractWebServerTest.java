@@ -16,7 +16,7 @@
 
 package ai.apptuit.metrics.jinsight.modules.servlet;
 
-import static ai.apptuit.metrics.jinsight.WebRequestContext.X_REQUEST_ID_HEADERNAME;
+import static ai.apptuit.metrics.jinsight.modules.servlet.ContextMetricsHelper.X_REQUEST_ID_HEADERNAME;
 import static ai.apptuit.metrics.jinsight.modules.servlet.BaseTestServlet.RUNTIME_REQUEST_ID_COOKIENAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
