@@ -17,14 +17,21 @@
 package ai.apptuit.metrics.jinsight.modules.httpurlconnection;
 
 import ai.apptuit.metrics.dropwizard.TagEncodedMetricName;
+import ai.apptuit.metrics.jinsight.TracingService;
 import ai.apptuit.metrics.jinsight.modules.common.RuleHelper;
 import com.codahale.metrics.Clock;
 import com.codahale.metrics.Timer;
+
 import java.net.HttpURLConnection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+
+import io.opencensus.trace.*;
+import io.opencensus.trace.propagation.TextFormat;
 import org.jboss.byteman.rule.Rule;
+
+import static io.opencensus.trace.Span.Kind.CLIENT;
 
 /**
  * @author Rajiv Shivane
@@ -36,6 +43,18 @@ public class UrlConnectionRuleHelper extends RuleHelper {
       UrlConnectionRuleHelper.class + ".START_TIME";
   private static final Clock CLOCK = Clock.defaultClock();
 
+  private static final String TRACE_STARTED = UrlConnectionRuleHelper.class + ".trace.started";
+  private static final String TRACE_CLOSED = UrlConnectionRuleHelper.class + ".trace.closed";
+  private static final TracingService tracer = TracingService.getInstance();
+  private static final TextFormat.Setter<HttpURLConnection> injector = new TextFormat.Setter<HttpURLConnection>() {
+    @Override
+    public void put(HttpURLConnection connection, String header, String value) {
+      connection.setRequestProperty(header, value);
+    }
+  };
+  private static final TextFormat textFormat = Tracing.getPropagationComponent()
+      .getTraceContextFormat();
+
   private Map<String, Timer> timers = new ConcurrentHashMap<>();
 
 
@@ -45,6 +64,21 @@ public class UrlConnectionRuleHelper extends RuleHelper {
 
   public void onConnect(HttpURLConnection urlConnection) {
     setObjectProperty(urlConnection, START_TIME_PROPERTY_NAME, CLOCK.getTick());
+
+  }
+
+  public void trace(HttpURLConnection connection) {
+    String spanName = connection.getRequestMethod() + "-" + connection.getURL().getPath();
+    // TODO this will start a new span under existing parent, or it will become a parent itself if no parent span exist.
+    // TODO How to handle cases when trigger method already injected the tracing.
+    // TODO Should add the tracing config in the existing agent config. This looks super hacky, needs to find better way.
+    String traceStarted = getObjectProperty(connection, TRACE_STARTED);
+    String traceClosed = getObjectProperty(connection, TRACE_CLOSED);
+    if (!Boolean.parseBoolean(traceStarted) && !Boolean.parseBoolean(traceClosed)) {
+      setObjectProperty(connection, TRACE_STARTED, "true");
+      tracer.createSpanScope(spanName, CLIENT);
+      textFormat.inject(tracer.currentSpan().getContext(), connection, injector);
+    }
   }
 
   public void onGetInputStream(HttpURLConnection urlConnection, int statusCode) {
@@ -64,5 +98,16 @@ public class UrlConnectionRuleHelper extends RuleHelper {
     });
 
     timer.update(t, TimeUnit.NANOSECONDS);
+    String traceStarted = getObjectProperty(urlConnection, TRACE_STARTED);
+    if (Boolean.parseBoolean(traceStarted)) {
+      tracer.addAttributeToCurrentSpan("http.statusCode", status);
+      tracer.addAttributeToCurrentSpan("http.method", method);
+      tracer.closeCurrentScope();
+      removeObjectProperty(urlConnection, TRACE_STARTED);
+      //TODO this is required as at some
+      // place getInputStream is getting called multiple times,
+      // and to avoid creating multiple spans need to this indicator.
+      setObjectProperty(urlConnection, TRACE_CLOSED, "true");
+    }
   }
 }

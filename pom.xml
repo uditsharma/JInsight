@@ -107,6 +107,7 @@ limitations under the License.
     <jacoco.version>0.8.1</jacoco.version>
     <byteman.version>4.0.2</byteman.version>
     <metrics.version>3.2.6</metrics.version>
+    <opencensus.version>0.18.0</opencensus.version>
     <apptuit.reporter.version>0.7.2</apptuit.reporter.version>
 
     <!-- Acceptance Criteria -->
@@ -141,6 +142,26 @@ limitations under the License.
       <groupId>io.dropwizard.metrics</groupId>
       <artifactId>metrics-jvm</artifactId>
       <version>${metrics.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-api</artifactId>
+      <version>${opencensus.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-impl</artifactId>
+      <version>${opencensus.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-exporter-trace-logging</artifactId>
+      <version>${opencensus.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.opencensus</groupId>
+      <artifactId>opencensus-exporter-trace-zipkin</artifactId>
+      <version>${opencensus.version}</version>
     </dependency>
 
 

@@ -55,14 +55,19 @@ public class ConfigService {
   private static final String API_ENDPOINT_PROPERTY_NAME = "apptuit.api_url";
   private static final String GLOBAL_TAGS_PROPERTY_NAME = "global_tags";
   private static final String HOST_TAG_NAME = "host";
+  private static final String SERVICE_NAME = "service.name";
 
   private static final File JINSIGHT_HOME = new File(System.getProperty("user.home"), ".jinsight");
   private static final File UNIX_JINSIGHT_CONF_DIR = new File("/etc/jinsight/");
   private static final ReportingMode DEFAULT_REPORTING_MODE = ReportingMode.API_PUT;
   private static final String DEFAULT_REPORTING_FREQUENCY = "15s";
+  private static final String DEFAULT_SERVICE_NAME = "UNKNOWN";
+
+  private static final TraceExporter DEFAULT_TRACE_EXPORTER = TraceExporter.NOOP;
 
 
   private static volatile ConfigService singleton = null;
+  private final String serviceName;
   private final String apiToken;
   private final URL apiUrl;
   private final ReportingMode reportingMode;
@@ -70,6 +75,8 @@ public class ConfigService {
   private final Map<String, String> loadedGlobalTags = new HashMap<>();
   private final String agentVersion;
   private Map<String, String> globalTags = null;
+
+  private final TracingConfig traceConfig;
 
   ConfigService(Properties config) throws ConfigurationException {
     this.apiToken = config.getProperty(ACCESS_TOKEN_PROPERTY_NAME);
@@ -98,6 +105,8 @@ public class ConfigService {
 
     loadGlobalTags(config);
 
+    traceConfig = new TracingConfig(config);
+    serviceName = config.getProperty(SERVICE_NAME, DEFAULT_SERVICE_NAME);
   }
 
   public static ConfigService getInstance() {
@@ -299,5 +308,56 @@ public class ConfigService {
 
     }
     return "?";
+  }
+
+  boolean isTracingEnabled() {
+    return traceConfig.tracingEnabled;
+  }
+
+  TraceExporter getTraceExporter() {
+    return traceConfig.traceExporter;
+  }
+
+  String getTraceExporterEndPoint() {
+    return traceConfig.exporterEndPoint;
+  }
+
+  String getServiceName() {
+    return serviceName;
+  }
+
+  private class TracingConfig {
+
+    private static final String TRACING_ENABLED = "tracing_enabled";
+    private static final String TRACE_EXPORTER = "trace_exporter";
+    private static final String TRACE_EXPORTER_ENDPOINT = "exporter.endPoint";
+
+    private final boolean tracingEnabled;
+    private final TraceExporter traceExporter;
+    private final String exporterEndPoint;
+
+    TracingConfig(Properties config) {
+      this.tracingEnabled = Boolean.parseBoolean(config.getProperty(TRACING_ENABLED));
+      this.traceExporter = initTracingExporter(config);
+      exporterEndPoint = config.getProperty(TRACE_EXPORTER_ENDPOINT);
+    }
+
+    private TraceExporter initTracingExporter(Properties config) {
+      String exporter = config.getProperty(TRACE_EXPORTER);
+      if (exporter != null) {
+        try {
+          return TraceExporter.valueOf(exporter);
+        } catch (IllegalArgumentException e) {
+          LOGGER.severe("Un-supported tracing exporter [" + exporter + "]. "
+              + "Using default reporting mode: [" + DEFAULT_TRACE_EXPORTER + "]");
+          LOGGER.log(Level.FINE, e.toString(), e);
+        }
+      }
+      return DEFAULT_TRACE_EXPORTER;
+    }
+  }
+
+  public enum TraceExporter {
+    ZIPKIN, LOG, NOOP
   }
 }

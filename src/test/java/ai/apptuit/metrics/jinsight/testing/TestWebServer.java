@@ -19,6 +19,12 @@ package ai.apptuit.metrics.jinsight.testing;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.*;
+import io.opencensus.trace.propagation.SpanContextParseException;
+import io.opencensus.trace.propagation.TextFormat;
+import io.opencensus.trace.samplers.Samplers;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -36,105 +42,126 @@ import java.util.Scanner;
  */
 public class TestWebServer {
 
-  private static final String ECHO_ENDPOINT = "/echo";
-  private HttpServer httpServer = HttpServer.create();
-
-  public TestWebServer() throws IOException {
-
-    int port = 9000;
-    boolean bound = false;
-    do {
-      try {
-        httpServer.bind(new InetSocketAddress(port), 0);
-        bound = true;
-      } catch (BindException e) {
-        port++;
-      }
-    } while (!bound && port < 12000);
-
-    httpServer.createContext(ECHO_ENDPOINT, new EchoHandler());
-
-    httpServer.start();
-  }
-
-  public static String streamToString(InputStream inputStream) throws IOException {
-    if (inputStream == null) {
-      return null;
-    }
-    try {
-      return new Scanner(inputStream).useDelimiter("\0").next();
-    } catch (NoSuchElementException e) {
-      return null;
-    }
-  }
-
-  public String getEchoEndpoint() {
-    return getEchoEndpoint(HttpURLConnection.HTTP_OK);
-  }
-
-  public String getEchoEndpoint(int statusCode) {
-    String serverURL = "http://localhost:" + httpServer.getAddress().getPort() + ECHO_ENDPOINT;
-    if (statusCode != HttpURLConnection.HTTP_OK && (statusCode > 199) && (statusCode < 599)) {
-      serverURL += "?status=" + statusCode;
-    }
-    return serverURL;
-  }
-
-  private Map<String, String> getQueryParameters(HttpExchange httpExchange) {
-    String query = httpExchange.getRequestURI().getQuery();
-    if (query == null) {
-      return Collections.emptyMap();
-    }
-    Map<String, String> params = new HashMap<>();
-    for (String param : query.split("&")) {
-      String pair[] = param.split("=");
-      if (pair.length > 1) {
-        params.put(pair[0], pair[1]);
-      } else {
-        params.put(pair[0], "");
-      }
-    }
-    return params;
-  }
-
-  public void stop() {
-    httpServer.stop(0);
-  }
-
-  public InetSocketAddress getAddress() {
-    return httpServer.getAddress();
-  }
-
-  private class EchoHandler implements HttpHandler {
-
-    @Override
-    public void handle(HttpExchange exchange) throws IOException {
-      Map<String, String> queryParameters = getQueryParameters(exchange);
-      String statusParam = queryParameters.get("status");
-      int statusCode =
-          (statusParam != null) ? Integer.parseInt(statusParam) : HttpURLConnection.HTTP_OK;
-
-      String requestBody = streamToString(exchange.getRequestBody());
-
-      String body = exchange.getRequestURI().toString();
-      body += "\n";
-      body += "\n";
-      body += requestBody;
-
-      byte[] response = body.getBytes();
-      if (statusCode == HttpURLConnection.HTTP_MOVED_TEMP) {
-        String redirectLocation = queryParameters.get("rd");
-        if (redirectLocation == null) {
-          statusCode = HttpURLConnection.HTTP_BAD_REQUEST;
-        } else {
-          exchange.getResponseHeaders().add("Location", redirectLocation);
+    private static final String ECHO_ENDPOINT = "/echo";
+    private HttpServer httpServer = HttpServer.create();
+    private final TextFormat.Getter<HttpExchange> extractor = new TextFormat.Getter<HttpExchange>() {
+        @Override
+        public String get(HttpExchange carrier, String key) {
+            return carrier.getRequestHeaders().getFirst(key);
         }
-      }
-      exchange.sendResponseHeaders(statusCode, response.length);
-      OutputStream outputStream = exchange.getResponseBody();
-      outputStream.write(response);
-      outputStream.close();
-      exchange.close();
+    };
+    private final Tracer tracer = Tracing.getTracer();
+    private final TextFormat textFormat = Tracing.getPropagationComponent().getTraceContextFormat();
+
+    public TestWebServer() throws IOException {
+
+        int port = 9000;
+        boolean bound = false;
+        do {
+            try {
+                httpServer.bind(new InetSocketAddress(port), 0);
+                bound = true;
+            } catch (BindException e) {
+                port++;
+            }
+        } while (!bound && port < 12000);
+
+        httpServer.createContext(ECHO_ENDPOINT, new EchoHandler());
+
+        httpServer.start();
     }
-  }
+
+    public static String streamToString(InputStream inputStream) throws IOException {
+        if (inputStream == null) {
+            return null;
+        }
+        try {
+            return new Scanner(inputStream).useDelimiter("\0").next();
+        } catch (NoSuchElementException e) {
+            return null;
+        }
+    }
+
+    public String getEchoEndpoint() {
+        return getEchoEndpoint(HttpURLConnection.HTTP_OK);
+    }
+
+    public String getEchoEndpoint(int statusCode) {
+        String serverURL = "http://localhost:" + httpServer.getAddress().getPort() + ECHO_ENDPOINT;
+        if (statusCode != HttpURLConnection.HTTP_OK && (statusCode > 199) && (statusCode < 599)) {
+            serverURL += "?status=" + statusCode;
+        }
+        return serverURL;
+    }
+
+    private Map<String, String> getQueryParameters(HttpExchange httpExchange) {
+        String query = httpExchange.getRequestURI().getQuery();
+        if (query == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> params = new HashMap<>();
+        for (String param : query.split("&")) {
+            String pair[] = param.split("=");
+            if (pair.length > 1) {
+                params.put(pair[0], pair[1]);
+            } else {
+                params.put(pair[0], "");
+            }
+        }
+        return params;
+    }
+
+    public void stop() {
+        httpServer.stop(0);
+    }
+
+    public InetSocketAddress getAddress() {
+        return httpServer.getAddress();
+    }
+
+    private class EchoHandler implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+
+            String spanName = exchange.getRequestMethod() + "-" + exchange.getRequestURI().getPath();
+            SpanBuilder spanBuilder = null;
+            try {
+                SpanContext parentSpanContext = textFormat.extract(exchange, extractor);
+                spanBuilder = tracer.spanBuilderWithRemoteParent(spanName, parentSpanContext);
+            } catch (SpanContextParseException e) {
+                spanBuilder = tracer.spanBuilder(spanName);
+            }
+            Scope scope = spanBuilder.setSampler(Samplers.alwaysSample())
+                    .setRecordEvents(true).setSpanKind(Span.Kind.SERVER).startScopedSpan();
+
+            Map<String, String> queryParameters = getQueryParameters(exchange);
+            String statusParam = queryParameters.get("status");
+            int statusCode =
+                    (statusParam != null) ? Integer.parseInt(statusParam) : HttpURLConnection.HTTP_OK;
+
+            String requestBody = streamToString(exchange.getRequestBody());
+
+            String body = exchange.getRequestURI().toString();
+            body += "\n";
+            body += "\n";
+            body += requestBody;
+
+            byte[] response = body.getBytes();
+            if (statusCode == HttpURLConnection.HTTP_MOVED_TEMP) {
+                String redirectLocation = queryParameters.get("rd");
+                if (redirectLocation == null) {
+                    statusCode = HttpURLConnection.HTTP_BAD_REQUEST;
+                } else {
+                    exchange.getResponseHeaders().add("Location", redirectLocation);
+                }
+            }
+            exchange.sendResponseHeaders(statusCode, response.length);
+            OutputStream outputStream = exchange.getResponseBody();
+            outputStream.write(response);
+            outputStream.close();
+            exchange.close();
+            scope.close();
+        }
+    }
 }

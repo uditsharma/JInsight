@@ -21,7 +21,9 @@ import static org.junit.Assert.assertThat;
 import ai.apptuit.metrics.jinsight.RegistryService;
 import ai.apptuit.metrics.jinsight.testing.CountTracker;
 import ai.apptuit.metrics.jinsight.testing.CountTracker.Snapshot;
+import ai.apptuit.metrics.jinsight.testing.LocalTraceExporter;
 import ai.apptuit.metrics.jinsight.testing.TestWebServer;
+import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +33,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
 import java.util.UUID;
+
+import io.opencensus.exporter.trace.logging.LoggingTraceExporter;
 import org.hamcrest.CoreMatchers;
 import org.junit.After;
 import org.junit.Before;
@@ -49,6 +53,7 @@ public class UrlConnectionInstrumentationTest {
   @Before
   public void setUp() throws Exception {
     server = new TestWebServer();
+    LocalTraceExporter.createAndRegister();
     tracker = new CountTracker(RegistryService.getMetricRegistry(),
         UrlConnectionRuleHelper.ROOT_NAME, "method", "status");
 
@@ -67,6 +72,7 @@ public class UrlConnectionInstrumentationTest {
 
   @After
   public void tearDown() throws Exception {
+    LocalTraceExporter.unRegister();
     server.stop();
   }
 

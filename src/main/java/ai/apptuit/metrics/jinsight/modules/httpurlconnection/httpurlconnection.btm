@@ -23,6 +23,25 @@ IF TRUE
 DO onConnect($0)
 ENDRULE
 
+RULE HttpURLConnection getInputStream Entry
+CLASS ^java.net.HttpURLConnection
+METHOD getInputStream
+HELPER ai.apptuit.metrics.jinsight.modules.httpurlconnection.UrlConnectionRuleHelper
+AT ENTRY
+IF TRUE
+DO trace($0)
+ENDRULE
+
+RULE HttpURLConnection getOutputStream Entry
+CLASS ^java.net.HttpURLConnection
+METHOD getOutputStream
+HELPER ai.apptuit.metrics.jinsight.modules.httpurlconnection.UrlConnectionRuleHelper
+AT ENTRY
+IF TRUE
+DO trace($0)
+ENDRULE
+
+
 RULE HttpURLConnection getInputStream exit
 CLASS ^java.net.HttpURLConnection
 METHOD getInputStream
